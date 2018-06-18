@@ -3,6 +3,8 @@ package com.devinwhitney.android.popularmovies.model;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import java.util.ArrayList;
+
 /**
  * Created by devin on 5/8/2018.
  */
@@ -14,6 +16,10 @@ public class MovieInformation implements Parcelable {
     private String overview;
     private String rating;
     private String releaseDate;
+    private int movieId;
+    private ArrayList<String> reviews;
+    private ArrayList<String> trailers;
+
 
     private MovieInformation(Parcel in) {
         title = in.readString();
@@ -21,6 +27,9 @@ public class MovieInformation implements Parcelable {
         overview = in.readString();
         rating = in.readString();
         releaseDate = in.readString();
+        movieId = in.readInt();
+        reviews = in.createStringArrayList();
+        trailers = in.createStringArrayList();
     }
 
     public static final Creator<MovieInformation> CREATOR = new Creator<MovieInformation>() {
@@ -79,6 +88,30 @@ public class MovieInformation implements Parcelable {
         this.releaseDate = releaseDate;
     }
 
+    public int getMovieId() {
+        return movieId;
+    }
+
+    public void setMovieId(int movieId) {
+        this.movieId = movieId;
+    }
+
+    public ArrayList<String> getReviews() {
+        return reviews;
+    }
+
+    public void setReviews(ArrayList<String> reviews) {
+        this.reviews = reviews;
+    }
+
+    public ArrayList<String> getTrailers() {
+        return trailers;
+    }
+
+    public void setTrailers(ArrayList<String> trailers) {
+        this.trailers = trailers;
+    }
+
     @Override
     public int describeContents() {
         return 0;
@@ -91,5 +124,8 @@ public class MovieInformation implements Parcelable {
         parcel.writeString(overview);
         parcel.writeString(rating);
         parcel.writeString(releaseDate);
+        parcel.writeInt(movieId);
+        parcel.writeStringList(reviews);
+        parcel.writeStringList(trailers);
     }
 }

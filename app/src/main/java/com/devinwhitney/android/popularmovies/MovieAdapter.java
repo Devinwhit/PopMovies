@@ -1,6 +1,7 @@
 package com.devinwhitney.android.popularmovies;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -21,6 +22,7 @@ public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.MovieAdapter
     private ArrayList<MovieInformation> mMovieInformation = new ArrayList<>();
     private final MovieAdapterOnClickHandler mClickHandler;
     private MovieAdapterScrollListener mScrollListener;
+
 
     public MovieAdapter(MovieAdapterOnClickHandler clickHandler, MovieAdapterScrollListener scrollListener) {
         mClickHandler = clickHandler;

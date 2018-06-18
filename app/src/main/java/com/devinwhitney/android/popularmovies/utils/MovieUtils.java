@@ -66,4 +66,52 @@ public class MovieUtils {
         return MovieJson.getMovieInfoFromJson(buff.toString());
     }
 
+    public static ArrayList<String> getReviews(int movieId, String apiKey) throws IOException {
+        URL url = null;
+        try {
+            url = new URL("https://api.themoviedb.org/3/movie/" + movieId + "/reviews?api_key=" + apiKey + "&language=en-US&page=1");
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+        StringBuilder buff = new StringBuilder();
+        HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+        try {
+            InputStream in = urlConnection.getInputStream();
+            Scanner scan = new Scanner(in);
+            scan.useDelimiter("\\A");
+
+            boolean hasMore = scan.hasNext();
+            if (hasMore) {
+                buff.append(scan.next());
+            }
+        } finally {
+            urlConnection.disconnect();
+        }
+        return MovieJson.getReviews(buff.toString());
+    }
+
+    public static ArrayList<String> getTrailers(int movieId, String apiKey) throws IOException {
+        URL url = null;
+        try {
+            url = new URL("https://api.themoviedb.org/3/movie/" + movieId + "/videos?api_key=" + apiKey + "&language=en-US&page=1");
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+        StringBuilder buff = new StringBuilder();
+        HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+        try {
+            InputStream in = urlConnection.getInputStream();
+            Scanner scan = new Scanner(in);
+            scan.useDelimiter("\\A");
+
+            boolean hasMore = scan.hasNext();
+            if (hasMore) {
+                buff.append(scan.next());
+            }
+        } finally {
+            urlConnection.disconnect();
+        }
+        return MovieJson.getTrailers(buff.toString());
+    }
+
 }

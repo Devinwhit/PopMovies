@@ -27,11 +27,52 @@ public class MovieJson {
                 info.setRating(obj.getString("vote_average"));
                 info.setReleaseDate(obj.getString("release_date"));
                 info.setImage(obj.getString("poster_path"));
+                info.setMovieId(Integer.parseInt(obj.getString("id")));
                 allMovieInformation.add(info);
             }
         } catch (JSONException e) {
             e.printStackTrace();
         }
         return allMovieInformation;
+    }
+
+    public static ArrayList<String> getReviews(String json) {
+        ArrayList<String[]> reviews = new ArrayList<>();
+        ArrayList<String> test = new ArrayList<>();
+        try {
+            JSONObject jsonObject = new JSONObject(json);
+            JSONArray jsonArray = jsonObject.getJSONArray("results");
+            for (int x = 0; x < jsonArray.length(); x++) {
+                JSONObject obj = jsonArray.getJSONObject(x);
+                String author = obj.getString("author");
+                String content = obj.getString("content");
+                test.add(content);
+                String toAdd[] = {author, content};
+                reviews.add(toAdd);
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return test;
+    }
+
+    public static ArrayList<String> getTrailers(String json) {
+        ArrayList<String> trailers = new ArrayList<>();
+        try {
+            JSONObject jsonObject = new JSONObject(json);
+            JSONArray jsonArray = jsonObject.getJSONArray("results");
+            for (int x = 0; x < jsonArray.length(); x++) {
+                JSONObject obj = jsonArray.getJSONObject(x);
+                String key = obj.getString("key");
+                String video = obj.getString("type");
+                if (video.equals("Trailer")) {
+                    trailers.add(key);
+                }
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return trailers;
+
     }
 }

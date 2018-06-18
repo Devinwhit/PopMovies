@@ -9,5 +9,11 @@
     <string name="popular">Popular</string>
     <string name="highest_rated">Highest Rated</string>
     <string name="API">YOUR_API_KEY_HERE</string>
+    <string name="reviews">Reviews</string>
+    <string name="trailer">View Trailer</string>
+    <string name="play">Play</string>
+    <string name="favoriteButton">Favorite</string>
+    <string name="unfavorite">Remove favorite</string>
+    <string name="favorites">Favorite Movies</string>
 
 </resources>

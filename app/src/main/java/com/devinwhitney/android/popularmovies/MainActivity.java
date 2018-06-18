@@ -1,6 +1,10 @@
 package com.devinwhitney.android.popularmovies;
 
+import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
@@ -16,11 +20,15 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import com.devinwhitney.android.popularmovies.data.MovieContract;
+import com.devinwhitney.android.popularmovies.data.MovieDbHelper;
 import com.devinwhitney.android.popularmovies.model.MovieInformation;
 import com.devinwhitney.android.popularmovies.utils.MovieUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import static com.devinwhitney.android.popularmovies.MovieAdapter.*;
 
@@ -31,6 +39,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     private ImageView mMoviePoster;
     private int pageNum = 1;
     private String sort = "popular";
+    private SQLiteDatabase mDb;
+
 
 
     private static final int MOVIE_LOADER_ID = 0;
@@ -77,21 +87,35 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             @Override
             public ArrayList<MovieInformation> loadInBackground() {
                 ArrayList<MovieInformation> info = new ArrayList<>();
-                String sort = args.getString("sort");
-                if (args.containsKey("pageNum")) {
-                    pageNum = args.getInt("pageNum");
-                }
-
-                try {
-                    if (sort.equals("popular"))
-                    {
-                        info = MovieUtils.getMostPopular(pageNum, apiKey);
-                    } else {
-                        info = MovieUtils.getHighestRated(pageNum, apiKey);
+                if (sort.equals("favorites")) {
+                    info = getFavorites();
+                }else {
+                    String sort = args.getString("sort");
+                    if (args.containsKey("pageNum")) {
+                        pageNum = args.getInt("pageNum");
                     }
 
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    try {
+                        if (sort.equals("popular")) {
+                            info = MovieUtils.getMostPopular(pageNum, apiKey);
+                        } else {
+                            info = MovieUtils.getHighestRated(pageNum, apiKey);
+                        }
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    for (MovieInformation movie : info) {
+                        int movieId = movie.getMovieId();
+                        try {
+                            ArrayList<String> reviews = MovieUtils.getReviews(movieId, apiKey);
+                            ArrayList<String> trailers = MovieUtils.getTrailers(movieId, apiKey);
+                            movie.setReviews(reviews);
+                            movie.setTrailers(trailers);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }
                 return info;
             }
@@ -105,6 +129,48 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
 
         };
+    }
+
+    private ArrayList<MovieInformation> getFavorites() {
+        ArrayList<MovieInformation> movies = new ArrayList<>();
+        MovieDbHelper dbHelper = new MovieDbHelper(this);
+
+        // Keep a reference to the mDb until paused or killed. Get a writable database
+        // because you will be adding restaurant customers
+        mDb = dbHelper.getReadableDatabase();
+        Cursor cursor = mDb.query(MovieContract.MovieEntry.TABLE_NAME,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null);
+        if (cursor.moveToFirst()) {
+            while (!cursor.isAfterLast()) {
+                MovieInformation movieInformation = new MovieInformation();
+                movieInformation.setTitle(cursor.getString(cursor.getColumnIndex(MovieContract.MovieEntry.COLUMN_MOVIE_TITLE)));
+                movieInformation.setImage(cursor.getString(cursor.getColumnIndex(MovieContract.MovieEntry.COLUMN_MOVIE_IMAGE)));
+                movieInformation.setMovieId(cursor.getInt(cursor.getColumnIndex(MovieContract.MovieEntry.COLUMN_MOVIE_ID)));
+                movieInformation.setOverview(cursor.getString(cursor.getColumnIndex(MovieContract.MovieEntry.COLUMN_MOVIE_OVERVIEW)));
+                movieInformation.setRating(cursor.getString(cursor.getColumnIndex(MovieContract.MovieEntry.COLUMN_MOVIE_RATING)));
+                movieInformation.setReleaseDate(cursor.getString(cursor.getColumnIndex(MovieContract.MovieEntry.COLUMN_MOVIE_RELEASE_DATE)));
+                ArrayList<String> allReviews = new ArrayList<>();
+                String[] review = cursor.getString(cursor.getColumnIndex(MovieContract.MovieEntry.COLUMN_MOVIE_REVIEWS)).split("\\r?\\n");
+                for (String rev : review) {
+                    allReviews.add(rev);
+                }
+                movieInformation.setReviews(allReviews);
+                ArrayList<String> allTrailers = new ArrayList<>();
+                List<String> list = Arrays.asList(cursor.getString(cursor.getColumnIndex(MovieContract.MovieEntry.COLUMN_MOVIE_TRAILERS)).split(","));
+                for (String trail : list) {
+                    allTrailers.add(trail);
+                }
+                movieInformation.setTrailers(allTrailers);
+                movies.add(movieInformation);
+                cursor.moveToNext();
+            }
+        }
+        return movies;
     }
 
     @Override
@@ -154,7 +220,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 getSupportLoaderManager().restartLoader(MOVIE_LOADER_ID, args, this);
             }
 
-        } else {
+        } else if (id == R.id.sort_top_rated) {
             if(sort.equals("rated")) {
                 Toast.makeText(this, "Highest Rated already selected!", Toast.LENGTH_SHORT).show();
             } else {
@@ -164,6 +230,15 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 getSupportLoaderManager().restartLoader(MOVIE_LOADER_ID, args, this);
             }
 
+        } else {
+            if(sort.equals("favorites")) {
+                Toast.makeText(this, "Favorites already selected!", Toast.LENGTH_SHORT).show();
+            } else {
+                invalidateData();
+                args.putString("sort", "favorites");
+                sort = "favorites";
+                getSupportLoaderManager().restartLoader(MOVIE_LOADER_ID, args, this);
+            }
         }
 
         return super.onOptionsItemSelected(item);
@@ -188,11 +263,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     @Override
     public void loadMore(int scrollItem, int movieArraySize) {
         System.out.println(scrollItem + "    " + movieArraySize);
-        if (scrollItem >=movieArraySize - 1){
+        if (scrollItem >=movieArraySize - 1 && !sort.equals("favorites")){
             Bundle args = new Bundle();
             args.putInt("pageNum", ++pageNum);
             args.putString("sort", sort);
             getSupportLoaderManager().restartLoader(MOVIE_LOADER_ID, args, this);
         }
     }
+
+
 }
