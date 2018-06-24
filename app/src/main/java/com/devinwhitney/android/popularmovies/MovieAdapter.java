@@ -1,7 +1,6 @@
 package com.devinwhitney.android.popularmovies;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,6 +17,7 @@ import java.util.ArrayList;
  */
 
 public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.MovieAdapterViewHolder> {
+
 
     private ArrayList<MovieInformation> mMovieInformation = new ArrayList<>();
     private final MovieAdapterOnClickHandler mClickHandler;
@@ -92,6 +92,16 @@ public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.MovieAdapter
         else{
             mMovieInformation.clear();
         }
+
+    }
+    public void clearMovieInformation() {
+        System.out.println("Movie Adapter Cleared!");
+        mMovieInformation.clear();
+    }
+
+
+    public  ArrayList<MovieInformation> getMovieInformation() {
+        return mMovieInformation;
     }
 
 

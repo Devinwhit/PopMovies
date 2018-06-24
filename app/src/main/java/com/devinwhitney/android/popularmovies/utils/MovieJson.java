@@ -37,8 +37,7 @@ public class MovieJson {
     }
 
     public static ArrayList<String> getReviews(String json) {
-        ArrayList<String[]> reviews = new ArrayList<>();
-        ArrayList<String> test = new ArrayList<>();
+        ArrayList<String> reviews = new ArrayList<>();
         try {
             JSONObject jsonObject = new JSONObject(json);
             JSONArray jsonArray = jsonObject.getJSONArray("results");
@@ -46,14 +45,12 @@ public class MovieJson {
                 JSONObject obj = jsonArray.getJSONObject(x);
                 String author = obj.getString("author");
                 String content = obj.getString("content");
-                test.add(content);
-                String toAdd[] = {author, content};
-                reviews.add(toAdd);
+                reviews.add(content);
             }
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        return test;
+        return reviews;
     }
 
     public static ArrayList<String> getTrailers(String json) {

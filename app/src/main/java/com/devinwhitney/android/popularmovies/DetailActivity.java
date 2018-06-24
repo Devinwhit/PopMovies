@@ -7,12 +7,14 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.devinwhitney.android.popularmovies.data.MovieContract;
@@ -38,11 +40,15 @@ public class DetailActivity extends AppCompatActivity implements TrailerAdapter.
     private RecyclerView mRecyclerView;
     private RecyclerView.Adapter mAdapter;
     private RecyclerView.LayoutManager mLayoutManager;
-    private SQLiteDatabase mDb;
     private Button mButton;
     private boolean favorite;
+    private ScrollView mScrollView;
+
+    private static final String SCROLL_KEY = "DETAILED_MOVIE_VIEW";
 
     private ArrayList<String> mTrailers;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,17 +64,16 @@ public class DetailActivity extends AppCompatActivity implements TrailerAdapter.
         mReleaseDate = findViewById(R.id.release_date);
         mPlot = findViewById(R.id.plot);
         mReviews = findViewById(R.id.reviews);
-
+        mScrollView = findViewById(R.id.scrollView);
+        mScrollView = new ScrollView(this);
         mTrailers = movieInformation.getTrailers();
 
         mRecyclerView = findViewById(R.id.trailerRV);
         mLayoutManager = new LinearLayoutManager(this);
+
         mRecyclerView.setLayoutManager(mLayoutManager);
         mAdapter = new TrailerAdapter(this, mTrailers);
         mRecyclerView.setAdapter(mAdapter);
-
-        MovieDbHelper dbHelper = new MovieDbHelper(this);
-        mDb = dbHelper.getWritableDatabase();
 
         mButton = findViewById(R.id.favButton);
         mButton.setOnClickListener(new View.OnClickListener() {
@@ -109,6 +114,8 @@ public class DetailActivity extends AppCompatActivity implements TrailerAdapter.
         Picasso.get().load("http://image.tmdb.org/t/p/w500" + movieInformation.getImage()).into(mMoviePoster);
         Picasso.get().load("http://image.tmdb.org/t/p/w185" + movieInformation.getImage()).into(mFullPoster);
         StringBuilder addReview = new StringBuilder("");
+
+
         if (!movieInformation.getReviews().isEmpty()) {
             for (String review : movieInformation.getReviews()) {
                 addReview.append(review + "\n");
@@ -125,6 +132,27 @@ public class DetailActivity extends AppCompatActivity implements TrailerAdapter.
         }
     }
 
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        int[] pass = {mScrollView.getScrollX(), mScrollView.getScrollY()};
+        outState.putIntArray(SCROLL_KEY, pass);
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        final int[] position = savedInstanceState.getIntArray(SCROLL_KEY);
+        if (position != null) {
+            mScrollView.post(new Runnable() {
+                @Override
+                public void run() {
+                    mScrollView.scrollTo(position[0], position[1]);
+                }
+            });
+        }
+    }
+
 
     @Override
     public void onClick(String trailer) {
@@ -138,7 +166,7 @@ public class DetailActivity extends AppCompatActivity implements TrailerAdapter.
 
     }
 
-    private long addFavorite(String name, String rating, String image, String release, String reviews, String trailers, String overview, int movieId) {
+    private Uri addFavorite(String name, String rating, String image, String release, String reviews, String trailers, String overview, int movieId) {
         ContentValues cv = new ContentValues();
         cv.put(MovieContract.MovieEntry.COLUMN_MOVIE_TITLE, name);
         cv.put(MovieContract.MovieEntry.COLUMN_MOVIE_RATING, rating);
@@ -148,19 +176,21 @@ public class DetailActivity extends AppCompatActivity implements TrailerAdapter.
         cv.put(MovieContract.MovieEntry.COLUMN_MOVIE_TRAILERS, trailers);
         cv.put(MovieContract.MovieEntry.COLUMN_MOVIE_OVERVIEW, overview);
         cv.put(MovieContract.MovieEntry.COLUMN_MOVIE_ID, movieId);
-        return mDb.insert(MovieContract.MovieEntry.TABLE_NAME, null, cv);
+        return getContentResolver().insert(MovieContract.MovieEntry.CONTENT_URI, cv);
     }
 
-    private boolean removeFavorite(long id) {
-        return mDb.delete(MovieContract.MovieEntry.TABLE_NAME, MovieContract.MovieEntry.COLUMN_MOVIE_ID + "=" + id, null) > 0;
+    private void removeFavorite(long id) {
+        Uri uri = MovieContract.MovieEntry.CONTENT_URI;
+        uri = uri.buildUpon().appendPath(Long.toString(id)).build();
+        getContentResolver().delete(uri, null,null);
+
     }
 
     private boolean checkFavorite(long id) {
-        Cursor query = mDb.query(MovieContract.MovieEntry.TABLE_NAME,null, MovieContract.MovieEntry.COLUMN_MOVIE_ID + "=" + id,null,null,null,null);
-        if (query.getCount() > 0) {
-            return true;
-        }
-        return false;
+        Uri uri = MovieContract.MovieEntry.CONTENT_URI;
+        uri = uri.buildUpon().appendPath(Long.toString(id)).build();
+        Cursor query  = getContentResolver().query(uri,null,Long.toString(id),null,null);
+        return query.getCount() > 0;
 
     }
 

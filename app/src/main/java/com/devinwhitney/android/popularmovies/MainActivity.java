@@ -5,6 +5,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
+import android.os.Parcelable;
+import android.os.PersistableBundle;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
@@ -21,13 +24,13 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.devinwhitney.android.popularmovies.data.MovieContract;
-import com.devinwhitney.android.popularmovies.data.MovieDbHelper;
 import com.devinwhitney.android.popularmovies.model.MovieInformation;
 import com.devinwhitney.android.popularmovies.utils.MovieUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static com.devinwhitney.android.popularmovies.MovieAdapter.*;
@@ -39,10 +42,15 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     private ImageView mMoviePoster;
     private int pageNum = 1;
     private String sort = "popular";
-    private SQLiteDatabase mDb;
+    private Parcelable mLayoutState;
+    private GridLayoutManager gridLayoutManager;
 
+    private boolean newSort = false;
 
-
+    private static final String STATE_KEY = "LAYOUT";
+    private static final String SORT_KEY = "sort";
+    private static final String KEEP_PAGENUM = "pageNum";
+    private static final String MOVIE_ARRAY = "movieArray";
     private static final int MOVIE_LOADER_ID = 0;
 
     @Override
@@ -50,33 +58,67 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         RecyclerView recyclerView = findViewById(R.id.rv);
-        GridLayoutManager gridLayoutManager = new GridLayoutManager(this, 2);
+        gridLayoutManager = new GridLayoutManager(this, 2);
+
         recyclerView.setLayoutManager(gridLayoutManager);
         mMovieAdapter = new MovieAdapter(this, this);
         recyclerView.setAdapter(mMovieAdapter);
 
         mLoadingIndicator = findViewById(R.id.pb_loading_indicator);
         mMoviePoster = findViewById(R.id.movie_image);
-
         LoaderManager.LoaderCallbacks<ArrayList<MovieInformation>> callback = MainActivity.this;
 
-        Bundle bundleForLoader = new Bundle();
-        bundleForLoader.putString("sort", "popular");
-        getSupportLoaderManager().initLoader(MOVIE_LOADER_ID, bundleForLoader, callback);
+        if (savedInstanceState != null){
+            getSupportLoaderManager().restartLoader(MOVIE_LOADER_ID, savedInstanceState, callback);
+        } else {
+            Bundle bundleForLoader = new Bundle();
+            bundleForLoader.putString("sort", "popular");
 
+            getSupportLoaderManager().initLoader(MOVIE_LOADER_ID, bundleForLoader, callback);
+
+        }
 
     }
 
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        mLayoutState = gridLayoutManager.onSaveInstanceState();
+        outState.putParcelable(STATE_KEY, mLayoutState);
+        outState.putString(SORT_KEY, sort);
+        outState.putInt(KEEP_PAGENUM, pageNum);
+        ArrayList<MovieInformation> info = mMovieAdapter.getMovieInformation();
+        outState.putParcelableArrayList(MOVIE_ARRAY, info);
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        if (savedInstanceState != null) {
+            mLayoutState = savedInstanceState.getParcelable(STATE_KEY);
+            sort = savedInstanceState.getString(SORT_KEY);
+            pageNum = savedInstanceState.getInt(KEEP_PAGENUM);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mLayoutState != null) {
+            gridLayoutManager.onRestoreInstanceState(mLayoutState);
+        }
+    }
 
     @Override
     public Loader<ArrayList<MovieInformation>> onCreateLoader(int id, final Bundle args) {
         return new  AsyncTaskLoader<ArrayList<MovieInformation>>(this) {
 
-            ArrayList<MovieInformation> mMovieInformation = null;
+            ArrayList<MovieInformation> mMovieInformation = args.getParcelableArrayList(MOVIE_ARRAY);
             String apiKey = getString(R.string.API);
             @Override
             protected void onStartLoading() {
                 if (mMovieInformation != null) {
+
                     deliverResult(mMovieInformation);
                 } else {
                     mLoadingIndicator.setVisibility(View.VISIBLE);
@@ -87,34 +129,45 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             @Override
             public ArrayList<MovieInformation> loadInBackground() {
                 ArrayList<MovieInformation> info = new ArrayList<>();
-                if (sort.equals("favorites")) {
+                String sortTask = args.getString("sort");
+                int taskPageNum = 1;
+                if (sortTask == null) {
+                    sortTask = sort;
+                }
+                if (sortTask.equals("favorites")) {
                     info = getFavorites();
                 }else {
-                    String sort = args.getString("sort");
                     if (args.containsKey("pageNum")) {
-                        pageNum = args.getInt("pageNum");
+                        taskPageNum = args.getInt("pageNum");
                     }
 
                     try {
-                        if (sort.equals("popular")) {
-                            info = MovieUtils.getMostPopular(pageNum, apiKey);
-                        } else {
-                            info = MovieUtils.getHighestRated(pageNum, apiKey);
+                        if (sortTask.equals("popular")) {
+                            info = MovieUtils.getMostPopular(taskPageNum, apiKey);
+                        } else if (sortTask.equals("rated")) {
+                            info = MovieUtils.getHighestRated(taskPageNum, apiKey);
                         }
-
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                     for (MovieInformation movie : info) {
                         int movieId = movie.getMovieId();
+                        System.out.println("movie id : " + movieId);
                         try {
                             ArrayList<String> reviews = MovieUtils.getReviews(movieId, apiKey);
-                            ArrayList<String> trailers = MovieUtils.getTrailers(movieId, apiKey);
+                            try {
+                                ArrayList<String> trailers = MovieUtils.getTrailers(movieId, apiKey);
+                                movie.setTrailers(trailers);
+                            } catch (Exception e) {
+                                movie.setTrailers(new ArrayList<String>());
+                            }
                             movie.setReviews(reviews);
-                            movie.setTrailers(trailers);
+
+
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
+
                     }
                 }
                 return info;
@@ -124,27 +177,18 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             public void deliverResult(ArrayList<MovieInformation> data) {
                 mMovieInformation = data;
                 super.deliverResult(data);
+
             }
-
-
 
         };
     }
 
     private ArrayList<MovieInformation> getFavorites() {
         ArrayList<MovieInformation> movies = new ArrayList<>();
-        MovieDbHelper dbHelper = new MovieDbHelper(this);
 
-        // Keep a reference to the mDb until paused or killed. Get a writable database
-        // because you will be adding restaurant customers
-        mDb = dbHelper.getReadableDatabase();
-        Cursor cursor = mDb.query(MovieContract.MovieEntry.TABLE_NAME,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null);
+        Uri uri = MovieContract.MovieEntry.CONTENT_URI;
+        Cursor cursor  = getContentResolver().query(uri,null,null,null,null);
+
         if (cursor.moveToFirst()) {
             while (!cursor.isAfterLast()) {
                 MovieInformation movieInformation = new MovieInformation();
@@ -156,15 +200,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 movieInformation.setReleaseDate(cursor.getString(cursor.getColumnIndex(MovieContract.MovieEntry.COLUMN_MOVIE_RELEASE_DATE)));
                 ArrayList<String> allReviews = new ArrayList<>();
                 String[] review = cursor.getString(cursor.getColumnIndex(MovieContract.MovieEntry.COLUMN_MOVIE_REVIEWS)).split("\\r?\\n");
-                for (String rev : review) {
-                    allReviews.add(rev);
-                }
+                Collections.addAll(allReviews, review);
                 movieInformation.setReviews(allReviews);
                 ArrayList<String> allTrailers = new ArrayList<>();
                 List<String> list = Arrays.asList(cursor.getString(cursor.getColumnIndex(MovieContract.MovieEntry.COLUMN_MOVIE_TRAILERS)).split(","));
-                for (String trail : list) {
-                    allTrailers.add(trail);
-                }
+                allTrailers.addAll(list);
                 movieInformation.setTrailers(allTrailers);
                 movies.add(movieInformation);
                 cursor.moveToNext();
@@ -176,7 +216,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     @Override
     public void onLoadFinished(Loader<ArrayList<MovieInformation>> loader, ArrayList<MovieInformation> data) {
         mLoadingIndicator.setVisibility(View.INVISIBLE);
-        mMovieAdapter.setMovieInformation(data);
+        if (mMovieAdapter.getMovieInformation().equals(data) && data != null) {
+            System.out.println("SAME ARRAY, DO NOT SET SAME DATA!!!!");
+        } else {
+            mMovieAdapter.setMovieInformation(data);
+        }
 
     }
 
@@ -192,7 +236,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
      * beginning again
      */
     private void invalidateData() {
-        mMovieAdapter.setMovieInformation(null);
+        mMovieAdapter.clearMovieInformation();
         pageNum = 1;
     }
 
@@ -215,6 +259,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 Toast.makeText(this, "Most Popular already selected!", Toast.LENGTH_SHORT).show();
             } else{
                 invalidateData();
+                args.putParcelableArrayList(MOVIE_ARRAY, null);
                 args.putString("sort", "popular");
                 sort = "popular";
                 getSupportLoaderManager().restartLoader(MOVIE_LOADER_ID, args, this);
@@ -225,6 +270,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 Toast.makeText(this, "Highest Rated already selected!", Toast.LENGTH_SHORT).show();
             } else {
                 invalidateData();
+                args.putParcelableArrayList(MOVIE_ARRAY, null);
                 args.putString("sort", "rated");
                 sort = "rated";
                 getSupportLoaderManager().restartLoader(MOVIE_LOADER_ID, args, this);

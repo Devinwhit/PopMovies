@@ -4,6 +4,8 @@ package com.devinwhitney.android.popularmovies.utils;
 import com.devinwhitney.android.popularmovies.model.MovieInformation;
 
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -26,6 +28,7 @@ public class MovieUtils {
             e.printStackTrace();
         }
         StringBuilder buff = new StringBuilder();
+        assert url != null;
         HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
         try {
             InputStream in = urlConnection.getInputStream();
@@ -43,6 +46,7 @@ public class MovieUtils {
     }
 
     public static ArrayList<MovieInformation> getHighestRated(int pageNum, String apiKey) throws IOException {
+        System.out.println("get highest rated called!");
         URL url = null;
         try {
             url = new URL("https://api.themoviedb.org/3/movie/top_rated?page=" + pageNum + "&language=en-US&api_key=" + apiKey);
@@ -50,6 +54,7 @@ public class MovieUtils {
             e.printStackTrace();
         }
         StringBuilder buff = new StringBuilder();
+        assert url != null;
         HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
         try {
             InputStream in = urlConnection.getInputStream();
@@ -60,7 +65,8 @@ public class MovieUtils {
             if (hasMore) {
                 buff.append(scan.next());
             }
-        } finally {
+        }
+        finally {
             urlConnection.disconnect();
         }
         return MovieJson.getMovieInfoFromJson(buff.toString());
@@ -98,7 +104,7 @@ public class MovieUtils {
             e.printStackTrace();
         }
         StringBuilder buff = new StringBuilder();
-        HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+        HttpURLConnection  urlConnection = (HttpURLConnection) url.openConnection();
         try {
             InputStream in = urlConnection.getInputStream();
             Scanner scan = new Scanner(in);
@@ -108,7 +114,8 @@ public class MovieUtils {
             if (hasMore) {
                 buff.append(scan.next());
             }
-        } finally {
+        }
+        finally {
             urlConnection.disconnect();
         }
         return MovieJson.getTrailers(buff.toString());

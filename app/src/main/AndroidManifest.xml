@@ -25,6 +25,10 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".MainActivity" />
         </activity>
+        <provider
+            android:name="com.devinwhitney.android.popularmovies.data.MovieContentProvider"
+            android:authorities="com.devinwhitney.android.popularmovies"
+            android:exported="false"/>
     </application>
 
 </manifest>

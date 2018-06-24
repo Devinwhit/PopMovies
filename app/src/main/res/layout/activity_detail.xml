@@ -2,6 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/detailScroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/colorPrimaryDark">
@@ -15,8 +16,8 @@
             android:id="@+id/movie_poster"
             android:layout_width="match_parent"
             android:layout_height="200dp"
-            android:scaleType="centerCrop"
-            android:contentDescription="@string/movie_poster_zoom"/>
+            android:contentDescription="@string/movie_poster_zoom"
+            android:scaleType="centerCrop" />
 
         <TextView
             android:id="@+id/rating"
@@ -48,9 +49,9 @@
             android:layout_gravity="start"
             android:layout_marginStart="8dp"
             android:layout_marginTop="64dp"
+            android:contentDescription="@string/movie_poster"
             app:layout_constraintStart_toStartOf="@id/movie_poster"
-            app:layout_constraintTop_toTopOf="@id/movie_poster"
-            android:contentDescription="@string/movie_poster"/>
+            app:layout_constraintTop_toTopOf="@id/movie_poster" />
 
 
         <TextView
@@ -58,23 +59,22 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_marginTop="24dp"
+            android:gravity="center"
             android:text="@string/plot"
             android:textColor="@color/text"
             android:textSize="24sp"
-            app:layout_constraintTop_toBottomOf="@+id/full_poster"
-            android:gravity="center"/>
+            app:layout_constraintTop_toBottomOf="@+id/full_poster" />
 
         <TextView
             android:id="@+id/reviews"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_marginTop="20dp"
-            android:text="@string/reviews"
-            app:layout_constraintTop_toBottomOf="@+id/plot"
             android:gravity="center"
+            android:text="@string/reviews"
             android:textColor="@color/text"
             android:textSize="16sp"
-             />
+            app:layout_constraintTop_toBottomOf="@+id/plot" />
 
         <android.support.v7.widget.RecyclerView
             android:id="@+id/trailerRV"
